@@ -1,0 +1,60 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+\usepackage{enumitem}
+
+\begin{document}
+
+\title{My First LaTeX Document}
+\author{Your Name}
+\date{\today}
+
+\maketitle
+
+\section{Introduction}
+This is the introduction section of my document.
+
+\section{Methods}
+Geometrical parameters:
+\begin{itemize}
+    \item Number of rows of tubes
+    \item Number of column of tubes
+    \item External diameter [m]
+    \item Wall thickness of the tubes [m]
+    \item Wall roughness [m]
+    \item Length of one tube [m]
+    \item Conductivity of steel [W/mK] (hypothesis on the material of the fins)
+\end{itemize}
+"Fins data for one fictional exchanger":
+\begin{itemize}
+    \item Thickness of the fins [m]
+    \item Space between fins [m] %(evaluated by counting the number of fins on 4cm and applying p_fin = (4-19*th_fin)/(nb_fins_4-1))
+    \item Height of the fins [m] %(hypothesis, because two tubes of different temperature use the same fin, we divided the fin height by two. It derives from the hypothesis that the fin is high enough so that the two heat transfers are decoupled)
+    \item Length of the fins [m]
+    \item Conductivity of aluminium [W/mK] (hypothesis on the material of the fins)
+\end{itemize}
+
+Calibration parameters:
+\begin{itemize}
+    \item C1
+    \item C2
+    \item C3
+    \item C4
+\end{itemize}
+
+Inputs:
+\begin{itemize}
+    \item Air flow rate [kg/s]
+    \item Air inlet temperature [K]
+    \item Water flow rate [kg/s]
+    \item Water inlet temperature [K]
+    \item Satesof the fans (on/off)
+\end{itemize}
+
+\section{Results}
+In this section, I will present the results of my experiments.
+
+\section{Conclusion}
+Finally, I will conclude my document.
+
+\end{document}

@@ -1,0 +1,10 @@
+TO DO LIST Librarie:
+
+*Cleaner tout les codes: Expander, Simple_moving_moundaries, Pump
+*Faire un code plus robuste pour le HX
+*Faire 2 boucles "cycle" pour les circuits d'eau
+*Ajouter une itération sur le mass flow rate
+*Faire un composant "type" 
+*Faire une fonction où mettre les paramètres typiques
+*Faire les ports Work
+*Comprendre avec le "charge sensitive"
