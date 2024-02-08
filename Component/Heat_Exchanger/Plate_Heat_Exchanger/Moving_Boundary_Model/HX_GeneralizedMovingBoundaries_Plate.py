@@ -33,8 +33,7 @@ from Component.Heat_Exchanger.Plate_Heat_Exchanger.Moving_Boundary_Model.Modules
 from Component.Heat_Exchanger.Plate_Heat_Exchanger.Moving_Boundary_Model.Modules.find_2P_boundaries import find_2P_boundaries
 from Component.Heat_Exchanger.Plate_Heat_Exchanger.Moving_Boundary_Model.Modules.Plate_HTC import water_Plate_HTC
 
-from Component.Heat_Exchanger.Plate_Heat_Exchanger.Moving_Boundary_Model.Modules.point import Point_on_cycle
-from Component.Heat_Exchanger.Plate_Heat_Exchanger.Moving_Boundary_Model.Modules.oil_point import Oil_Point_on_cycle
+from Port.Mass_connector import Mass_connector
 from Component.Heat_Exchanger.Plate_Heat_Exchanger.Moving_Boundary_Model.Modules.Geometry_Plate_HX_SWEP import Plate_HX_Geom_SWEP
 
 #%%
@@ -52,79 +51,51 @@ class Plate_HeatExchanger(object):
     class C():
         pass  
     
-    def __init__(self, flow_type, htc_type, H_DP_ON, C_DP_ON):
+    def __init__(self, flow_type = 'Counter_flow', htc_type= 'Correlation', H_DP_ON = True, C_DP_ON = True):
+        
+        "Flow related parameters"
+        self.flow_type = flow_type
+        self.htc_type = htc_type
+        
+        "Pressure drop parameters"
+        self.H_DP_ON = H_DP_ON
+        self.C_DP_ON = C_DP_ON
         
         "Status variables"
         self.calculable = None
         self.parametrized = None
+        self.defined = False
         
         "Geometry sub-object"
         self.geom = None # parameters 
         
-        "Hot side"
+        "Supply"
+        self.point_su = [None, None]
+        
+        "Exhaust"
+        self.point_ex = [None, None]        
+        
+        "Is the working fluid the hot or cold fluid ?"
+        self.wf_T = None
+        
+        "Hot Side"
         self.H_su = None
-        self.H_ex = None        
+        self.H_ex = None
         
         "Cold side"
         self.C_su = None
         self.C_ex = None
         
-        "Pressure drop parameters"
-        self.H_DP_ON = H_DP_ON
-        if self.H_DP_ON == True: # !!! arbitrarily set
-            self.H.f_dp = {"K": 14.14, "B": 1.892}
-            
-        else:
-            self.H.f_dp = {"K": 0, "B": 0}        
-            
-        if C_DP_ON == True:
-            self.C.f_dp = {"K": 14.14, "B": 1.892}
-        else:
-            self.C.f_dp = {"K": 0, "B": 0}
-            
-        
-        
         "Number of discretizations"
         self.n_disc = None
-        self.oil_name = None
         
         "Type of flow"
         self.typeHEX = flow_type
-        
-        "Type of HTC"
-        
-        if htc_type == "User-Defined":
-            # !!! User-Defined Heat Transfer Coefficients (hot):
-            self.H.h_liq = 100
-            self.H.h_vap = 100
-            self.H.h_twophase = 1000
-            self.H.h_vapwet = 100
-            self.H.h_tpdryout = 1000
-            self.H.h_transcrit = 200
-        
-            # !!! User-Defined Heat Transfer Coefficients (cold):
-            self.C.h_liq = 100
-            self.C.h_vap = 100
-            self.C.h_twophase = 1000
-            self.C.h_vapwet = 100
-            self.C.h_tpdryout = 10000
-            self.C.h_transcrit = 200
-        else:
-            # Type 
-            self.H.HeatExchange_Correlation = "Correlation"
-            # params.H.HeatExchange_Correlation = "User-Defined"
-            self.H.Correlation_1phase = "Gnielinski"
-            self.H.Correlation_2phase = "Han_cond_BPHEX"
-            
-            self.C.HeatExchange_Correlation = "Correlation"
-            # params.C.HeatExchange_Correlation = "User-Defined"
-            self.C.Correlation_1phase = "Gnielinski"
-            self.C.Correlation_2phase = "Han_Boiling_BPHEX_HTC"
                 
 #%%    
     def check_calculable(self):
-        if self.H_su != None and self.C_su != None:
-            if (self.H_su.completely_known) and (self.C_su.completely_known):
+        if self.point_su[0] != None and self.point_su[1] != None:
+            if (self.point_su[0].completely_known) and (self.point_su[1].completely_known):
                 self.calculable = True
         
     def check_parametrized(self):
@@ -148,27 +119,63 @@ class Plate_HeatExchanger(object):
                     setattr(self, key, value)
                 else:
                     print(f"Warning: Parameter '{key}' not found in the heat exchanger.")
+                    
+                    "Type of HTC"
+        
+            if self.htc_type == "User-Defined":
+                # !!! User-Defined Heat Transfer Coefficients (hot):
+                self.H.h_liq = 100
+                self.H.h_vap = 100
+                self.H.h_twophase = 1000
+                self.H.h_vapwet = 100
+                self.H.h_tpdryout = 1000
+                self.H.h_transcrit = 200
+            
+                # !!! User-Defined Heat Transfer Coefficients (cold):
+                self.C.h_liq = 100
+                self.C.h_vap = 100
+                self.C.h_twophase = 1000
+                self.C.h_vapwet = 100
+                self.C.h_tpdryout = 10000
+                self.C.h_transcrit = 200
+            else:
+                # Type 
+                self.H.HeatExchange_Correlation = "Correlation"
+                # params.H.HeatExchange_Correlation = "User-Defined"
+                self.H.Correlation_1phase = "Gnielinski"
+                self.H.Correlation_2phase = "Han_cond_BPHEX"
+                
+                self.C.HeatExchange_Correlation = "Correlation"
+                # params.C.HeatExchange_Correlation = "User-Defined"
+                self.C.Correlation_1phase = "Gnielinski"
+                self.C.Correlation_2phase = "Han_Boiling_BPHEX_HTC"
     
+            if self.H_DP_ON == True: # !!! arbitrarily set
+                self.H.f_dp = {"K": 14.14, "B": 1.892}
+            else:
+                self.H.f_dp = {"K": 0, "B": 0}        
+                
+            if self.C_DP_ON == True:
+                self.C.f_dp = {"K": 14.14, "B": 1.892}
+            else:
+                self.C.f_dp = {"K": 0, "B": 0}
+                
+            self.check_parametrized()
+
+
 #%%
     def external_pinching(self):
         "Determine the maximum heat transfer rate based on the external pinching analysis"
         
-        "1) Set of arbitrary bound values" # !!! Find out why
-        if self.H_su.fluid == 'Oil':
-            T_hmin = 273.15 + 100
-        else:        
-            T_hmin = 218 # above CO2 freezing point (194.7 K)
+        "1) Set of arbitrary bound values" # !!! Find out why      
+        T_hmin = 218 # above CO2 freezing point (194.7 K)
             
         T_cmax = 273.15+250
         
         "2) Hot fluid side pinch"
         
         # Computation of outlet lowest possible enthalpy of the hot fluid using either the entrance cold fluid inlet temperature, or the arbitrary minimal
-        if self.H_su.fluid == 'Oil':
-            _, _, _, _, _, cp_h,_ = PropsFluid(max(self.T_ci, T_hmin), self.p_hi, max(self.T_ci, T_hmin), self.H_su.fluid, oil_name = self.oil_name)
-            self.h_ho = cp_h*max(self.T_ci, T_hmin)
-        else:
-            self.h_ho = CP.PropsSI('H','T', max(self.T_ci, T_hmin),'P',self.p_hi,self.H_su.fluid) # Equation 5 (Bell et al. 2015)
+        self.h_ho = CP.PropsSI('H','T', max(self.T_ci, T_hmin),'P',self.p_hi,self.H_su.fluid) # Equation 5 (Bell et al. 2015)
         
         # Q_max computation
         Qmaxh = self.mdot_h*(self.h_hi-self.h_ho) # Equation 4 (Bell et al. 2015)
@@ -209,7 +216,7 @@ class Plate_HeatExchanger(object):
         """ Calculate the cell boundaries for each fluid """
         
         "1) Re-calculate the outlet enthalpies of each stream"
-        
+                
         self.h_co = self.h_ci + Q/self.mdot_c
         self.h_ho = self.h_hi - Q/self.mdot_h
 
@@ -218,7 +225,7 @@ class Plate_HeatExchanger(object):
         "2.1) For the cold fluid"
         
         if not self.Transcritical_c: # if not in transcritical
-            if not (self.C.f_dp == {"K": 0, "B": 0}) or self.DP_c < 1e-2:
+            if (not (self.C.f_dp == {"K": 0, "B": 0}) or self.DP_c < 1e-2):
                 # If no pressure drop is calculated or if the pressure drop is neglectable, assign saturation conditions to the ideal case:
                 self.p_cdew = self.p_ci
                 self.p_cbubble = self.p_co
@@ -237,8 +244,8 @@ class Plate_HeatExchanger(object):
                 
         "2.2) For the hot fluid"
         
-        if not self.Transcritical_h and self.H_su.fluid != 'Oil':
-            if not (self.H.f_dp == {"K": 0, "B": 0}) or self.DP_h < 1e-2:
+        if not self.Transcritical_h:
+            if (not (self.H.f_dp == {"K": 0, "B": 0}) or self.DP_h < 1e-2) and not self.h_incomp_flag:
                 #If no pressure drop is calculated or if the pressure drop is neglectable, assign saturation conditions to the ideal case:
                 self.p_hdew = self.p_hi
                 self.p_hbubble = self.p_ho    
@@ -246,7 +253,7 @@ class Plate_HeatExchanger(object):
                 self.T_hdew = self.T_hdew_ideal
                 self.h_hbubble = self.h_hbubble_ideal
                 self.h_hdew = self.h_hdew_ideal
-            else:
+            elif not self.h_incomp_flag:
                 h_hbubble, h_hdew, p_hdew, p_hbubble, _, _, = find_2P_boundaries(self.H_su.fluid, self.h_hi, self.h_ho, self.p_hi, self.p_ho)
                 self.p_hdew = p_hdew
                 self.p_hbubble = p_hbubble
@@ -278,9 +285,9 @@ class Plate_HeatExchanger(object):
         self.hvec_c = [h for h in self.hvec_c if (h >= self.h_ci and h <= self.h_co)]
         
         # Hot side
-        if not self.Transcritical_h and self.H_su.fluid != 'Oil':
+        if not self.Transcritical_h and not self.h_incomp_flag:
             self.hvec_h = np.append(np.linspace(self.h_hi, self.h_ho, n_disc), [self.h_hdew, self.h_hbubble])
-        elif self.Transcritical_h or self.H_su.fluid == 'Oil':
+        elif self.Transcritical_h or self.h_incomp_flag:
             #In transcritical, just dont append the unexisting dew and bubble enthalpies
             self.hvec_h = np.linspace(self.h_hi, self.h_ho, n_disc)
             
@@ -353,13 +360,9 @@ class Plate_HeatExchanger(object):
         # Calculate the temperature and entropy at each cell boundary
         self.Tvec_c = CP.PropsSI('T','H',self.hvec_c,'P',self.pvec_c,self.C_su.fluid)
         
-        if self.H_su.fluid != 'Oil':
-            self.Tvec_h = CP.PropsSI('T','H',self.hvec_h,'P',self.pvec_h,self.H_su.fluid)
-            self.svec_h = CP.PropsSI('S','H',self.hvec_h,'P',self.pvec_h,self.H_su.fluid)
-        else:
-            _, _, _, _, _, cp_h,_ = PropsFluid(self.T_hi, self.p_hi, self.T_hi, self.H_su.fluid, oil_name = self.oil_name)
-            self.Tvec_h = self.hvec_h/cp_h
-            
+        self.Tvec_h = CP.PropsSI('T','H',self.hvec_h,'P',self.pvec_h,self.H_su.fluid)
+        self.svec_h = CP.PropsSI('S','H',self.hvec_h,'P',self.pvec_h,self.H_su.fluid)
+        
         self.svec_c = CP.PropsSI('S','H',self.hvec_c,'P',self.pvec_c,self.C_su.fluid)
 
 
@@ -369,7 +372,7 @@ class Plate_HeatExchanger(object):
         "6.1) Hot Fluid"
         self.x_vec_h = []
         for i, h_h in enumerate(self.hvec_h):
-            if not self.Transcritical_h and self.H_su.fluid != 'Oil':
+            if not self.Transcritical_h and not self.h_incomp_flag:
                 if h_h < self.h_hbubble:
                     self.x_vec_h.append(-2)        
                 elif h_h > self.h_hdew:
@@ -396,7 +399,7 @@ class Plate_HeatExchanger(object):
         
         if not self.Transcritical_c:
             self.Tvec_sat_pure_c = CP.PropsSI("T", "Q", 0.5, "P", self.pvec_c, self.C_su.fluid)
-        if not self.Transcritical_h and self.H_su.fluid != 'Oil':
+        if not self.Transcritical_h and not self.h_incomp_flag:
             self.Tvec_sat_pure_h = CP.PropsSI("T", "Q", 0.5, "P", self.pvec_h, self.H_su.fluid)
             
         "8) Calculate pinch and heat exchanger border temperature deltas"
@@ -419,7 +422,7 @@ class Plate_HeatExchanger(object):
         "1) Check for the hot stream"
         
         if stream == 'hot':
-            if not self.Transcritical_h and self.H_su.fluid != 'Oil': # If the hot side is not transcritical
+            if not self.Transcritical_h and not self.h_incomp_flag: # If the hot side is not transcritical
                 for i in range(1,len(self.hvec_h)-1):
                     
                     # Check if enthalpy is equal to the dewpoint enthalpy of hot stream and hot stream is colder than cold stream (impossible)
@@ -474,7 +477,7 @@ class Plate_HeatExchanger(object):
             raise ValueError
     
     #%%
-    def CalcHeatExch(self, only_external = False, and_solve = False):
+    def solve(self, only_external = False, and_solve = True):
         """
         Parameters
         ----------
@@ -494,6 +497,23 @@ class Plate_HeatExchanger(object):
         """
         
         "1) Main Input variables"
+        
+        if self.wf_T == "C": # The working fluid is the cold fluid    
+            self.H_su = self.point_su[1]
+            self.C_su = self.point_su[0]
+            
+            self.H_ex = self.point_ex[1]
+            self.C_ex = self.point_ex[0]   
+            
+        elif self.wf_T == "H": # The working fluid is the hot fluid    
+            self.H_su = self.point_su[0]
+            self.C_su = self.point_su[1]
+            
+            self.H_ex = self.point_ex[0]
+            self.C_ex = self.point_ex[1]      
+            
+            
+        self.h_incomp_flag = (self.H_su.fluid.find("INCOMP") != -1)
                 
         # Hot fluid
         self.mdot_h = self.H_su.m_dot
@@ -504,14 +524,10 @@ class Plate_HeatExchanger(object):
         self.mdot_c = self.C_su.m_dot
         self.h_ci = self.C_su.h
         self.p_ci = self.C_su.p
-        
+                
         # Determine the inlet temperatures from the pressure/enthalpy pairs
         self.T_ci = CP.PropsSI('T', 'P', self.C_su.p, 'H', self.C_su.h, self.C_su.fluid)
-        
-        if self.H_su.fluid == 'Oil':
-            self.T_hi = self.H_su.T
-        else:
-            self.T_hi = CP.PropsSI('T', 'P', self.p_hi, 'H', self.h_hi, self.H_su.fluid)
+        self.T_hi = CP.PropsSI('T', 'P', self.p_hi, 'H', self.h_hi, self.H_su.fluid)
 
         "2) Determine if the streams come in at a higher pressure than the transcritical pressure"
         
@@ -519,13 +535,11 @@ class Plate_HeatExchanger(object):
         self.Transcritical_c = False
         self.Transcritical_h = False
         
-        if (self.p_ci - CP.PropsSI("PCRIT", self.C_su.fluid)) >= 1e-06:
-            self.Transcritical_c = True
-        if self.H_su.fluid != 'Oil':
-            if (self.p_hi - CP.PropsSI("PCRIT", self.H_su.fluid)) >= 1e-06:
-                self.Transcritical_h = True
+        if not self.h_incomp_flag and (self.p_hi - CP.PropsSI("PCRIT", self.H_su.fluid)) >= 1e-06:
+            self.Transcritical_h = True
 
         "3) Calculate the ideal bubble and dew temperatures/enthalpies for each stream IF the fluid is not transcritical"
+        
         
         if not self.Transcritical_c:
             self.T_cbubble_ideal = CP.PropsSI('T', 'P', self.p_ci, 'Q', 0, self.C_su.fluid)
@@ -533,7 +547,7 @@ class Plate_HeatExchanger(object):
             self.h_cbubble_ideal = CP.PropsSI('H', 'T', self.T_cbubble_ideal, 'Q', 0, self.C_su.fluid)
             self.h_cdew_ideal    = CP.PropsSI('H', 'T', self.T_cdew_ideal, 'Q', 1, self.C_su.fluid)  
             
-        if not self.Transcritical_h and self.H_su.fluid != 'Oil':
+        if not self.Transcritical_h and not self.h_incomp_flag:
             self.T_hbubble_ideal = CP.PropsSI('T', 'P', self.p_hi, 'Q', 0, self.H_su.fluid)
             self.T_hdew_ideal    = CP.PropsSI('T', 'P', self.p_hi, 'Q', 1, self.H_su.fluid)
             self.h_hbubble_ideal = CP.PropsSI('H', 'T', self.T_hbubble_ideal, 'Q', 0, self.H_su.fluid)
@@ -582,7 +596,7 @@ class Plate_HeatExchanger(object):
             
             "5.3) Solve the heat exchanger to find the actual heat rate"
             if and_solve and not only_external:
-                Q = self.solve()
+                Q = self.solve_HX()
 
             self.epsilon_th = self.Q/self.Qmax # HTX efficiency
             self.residual = 1 - sum(self.w) # HTX residual # !!! (what is "w" ?)
@@ -598,15 +612,44 @@ class Plate_HeatExchanger(object):
             
             # Mass computation # !!! understand + explain the formula
             for i in range(len(self.hvec_h)-1):
-                if self.H_su.fluid != 'Oil':
-                    self.Mvec_h[i] = self.Vvec_h[i]*0.5*(CP.PropsSI("D", "P", self.pvec_h[i], "H", self.hvec_h[i], self.H_su.fluid) + CP.PropsSI("D", "P", self.pvec_h[i+1], "H", self.hvec_h[i+1], self.H_su.fluid))
-                else:
-                    _, _, _, _, _, _, rho_h = PropsFluid(self.Tvec_h[i], self.pvec_h[i], self.Tvec_h[i], self.H_su.fluid, oil_name = self.oil_name)
-                    self.Mvec_h[i] = self.Vvec_h[i]*rho_h
                 
+                self.Mvec_h[i] = self.Vvec_h[i]*0.5*(CP.PropsSI("D", "P", self.pvec_h[i], "H", self.hvec_h[i], self.H_su.fluid) + CP.PropsSI("D", "P", self.pvec_h[i+1], "H", self.hvec_h[i+1], self.H_su.fluid))
                 self.Mvec_c[i] = self.Vvec_c[i]*0.5*(CP.PropsSI("D", "P", self.pvec_c[i], "H", self.hvec_c[i], self.C_su.fluid) + CP.PropsSI("D", "P", self.pvec_c[i+1], "H", self.hvec_c[i+1], self.C_su.fluid))
 
             if and_solve:
+                # Hot side
+                H_ex = Mass_connector()
+                
+                H_ex.set_fluid(self.H_su.fluid)
+                H_ex.set_T(self.Tvec_h[-1])
+                H_ex.set_p(self.pvec_h[-1]) 
+                H_ex.set_m_dot(self.H_su.m_dot) 
+                
+                self.H_ex = H_ex
+                
+                if self.wf_T == "C": # The working fluid is the cold fluid    
+                    self.point_ex[1] = H_ex
+                    
+                elif self.wf_T == "H": # The working fluid is the hot fluid    
+                    self.point_ex[0] = H_ex
+                    
+                # Cold side
+                C_ex = Mass_connector()
+                
+                C_ex.set_fluid(self.C_su.fluid)
+                C_ex.set_T(self.Tvec_c[-1]) # Example temperature [K]
+                C_ex.set_p(self.pvec_c[-1]) # Example Pressure [Pa]
+                C_ex.set_m_dot(self.C_su.m_dot) 
+        
+                self.C_ex = C_ex
+                
+                if self.wf_T == "C": # The working fluid is the cold fluid    
+                    self.point_ex[0] = C_ex
+                    
+                elif self.wf_T == "H": # The working fluid is the hot fluid    
+                    self.point_ex[1] = C_ex
+                                            
+                self.defined = True
                 return Q
         else: # Just a flag if the heat exchanger is not solved
             self.Q = 1
@@ -667,7 +710,7 @@ class Plate_HeatExchanger(object):
             # Hot side
             Th_mean = 0.5*(Thi + Tho) # mean temperature over the cell
             
-            if not self.Transcritical_h and self.H_su.fluid != 'Oil':
+            if not self.Transcritical_h and not self.h_incomp_flag:
                 Th_sat_mean = 0.5*(self.Tvec_sat_pure_h[k] + self.Tvec_sat_pure_h[k+1]) # mean saturation temperature over the cell
             
             p_h_mean = 0.5*(self.pvec_h[k] + self.pvec_c[k+1]) # mean pressure over the cell
@@ -675,7 +718,7 @@ class Plate_HeatExchanger(object):
             "2.2) Hot side phase identification"
             
             # If not transcritical
-            if not self.Transcritical_h and self.H_su.fluid != 'Oil':
+            if not self.Transcritical_h and not self.h_incomp_flag:
                 
                 havg_h = (self.hvec_h[k] + self.hvec_h[k+1])/2.0 # Average cell enthalpy over the cell
                 
@@ -696,12 +739,12 @@ class Plate_HeatExchanger(object):
                     self.phases_h.append('two-phase')
                     T_wall_h = T_wall
                     
+            elif self.h_incomp_flag:
+                self.phases_h.append('liquid')
+                T_wall_h = T_wall
+                
             elif self.Transcritical_h:
                 self.phases_h.append("transcritical")
-                T_wall_h = T_wall
-            
-            elif self.H_su.fluid == 'Oil':
-                self.phases_h.append("liquid")
                 T_wall_h = T_wall
             
             "2.3) Cold side phase identification"
@@ -775,7 +818,7 @@ class Plate_HeatExchanger(object):
                 # 1 phase case
                 
                 if self.phases_h[k] == "liquid" or self.phases_h[k] == "vapor" or self.phases_h[k] == "vapor-wet" or self.phases_h[k] == "transcritical":
-                    mu_h, Pr_h, k_h, mu_wall, mu_rat, _, _ = PropsFluid(Th_mean, p_h_mean, T_wall_h, self.H_su.fluid, oil_name = self.oil_name)
+                    mu_h, Pr_h, k_h, mu_wall, mu_rat, _, _ = PropsFluid(Th_mean, p_h_mean, T_wall_h, self.H_su.fluid, self.h_incomp_flag)
                     if self.H.Correlation_1phase  == "Gnielinski":
                         alpha_h, _ = Gnielinski_Pipe_HTC(mu_h, Pr_h, k_h, G_h, self.geom.H_Dh, self.geom.l)
                 
@@ -830,7 +873,7 @@ class Plate_HeatExchanger(object):
                 
                 # 1 phase case
                 if self.phases_c[k] == "liquid" or self.phases_c[k] == "vapor" or self.phases_c[k] == "vapor-wet" or self.phases_c[k] == "transcritical":
-                    mu_c, Pr_c, k_c, mu_wall, mu_rat, _, _ = PropsFluid(Tc_mean, p_c_mean, T_wall_c, self.C_su.fluid)
+                    mu_c, Pr_c, k_c, mu_wall, mu_rat, _, _ = PropsFluid(Tc_mean, p_c_mean, T_wall_c, self.C_su.fluid, False)
                     
                     if self.C_su.fluid == 'water':
                         alpha_c = water_Plate_HTC(mu_c, Pr_c, k_c, G_c, self.geom.H_Dh)
@@ -913,7 +956,7 @@ class Plate_HeatExchanger(object):
         return 1-sum(w)
 
 #%%
-    def solve(self):
+    def solve_HX(self):
         """ 
         Solve the objective function using Brent's method and the maximum heat transfer 
         rate calculated from the pinching analysis
@@ -983,27 +1026,31 @@ class Plate_HeatExchanger(object):
 
 #%%
 
-def Plate_HX(H_su, C_su, HX_geom, htc_type, flow_type, n_disc, DP_H_ON, DP_C_ON, calc, plot, print_flag, oil_name = ''):
+def Plate_HX(wf_T, H_su, C_su, HX_geom, htc_type, flow_type, n_disc, DP_H_ON, DP_C_ON, calc, plot, print_flag):
     import time
     start_time = time.time()   
 
     # #Problem ici!!!    
-    # if H_su.T < C_su.T:
-    #     temp = H_su
-    #     H_su = C_su
-    #     C_su = temp
-    #     print("Hot and cold sides were inverted")
+    if H_su.T < C_su.T:
+        temp = H_su
+        H_su = C_su
+        C_su = temp
+        print("Hot and cold sides were inverted")
     
-    HX = Plate_HeatExchanger(flow_type, htc_type, DP_H_ON, DP_C_ON) 
+    HX = Plate_HeatExchanger() 
     
-    HX.set_parameters(H_su = H_su, C_su = C_su, geom = HX_geom, n_disc = n_disc, oil_name = oil_name)
+    if wf_T == "C": # The working fluid is the cold fluid    
+        HX.set_parameters(point_su = [C_su,H_su], geom = HX_geom, n_disc = n_disc, wf_T = wf_T, flow_type = flow_type, htc_type = htc_type, H_DP_ON = DP_H_ON, C_DP_ON = DP_C_ON) 
+    elif wf_T == "H": # The working fluid is the hot fluid    
+        HX.set_parameters(point_su = [H_su,C_su], geom = HX_geom, n_disc = n_disc, wf_T = wf_T, flow_type = flow_type, htc_type = htc_type, H_DP_ON = DP_H_ON, C_DP_ON = DP_C_ON)
+        
     
     if calc == 1:
         HX.check_calculable()
         HX.check_parametrized()
         if HX.calculable and HX.parametrized:
             #Actually run the HX code
-            HX.CalcHeatExch(only_external = False, and_solve = True)
+            HX.solve()
         
         if print_flag == 1: 
             
@@ -1023,45 +1070,43 @@ def Plate_HX(H_su, C_su, HX_geom, htc_type, flow_type, n_disc, DP_H_ON, DP_C_ON,
         if plot == 1:
             HX.plot_cells('full.png')
         
-        if H_su.fluid != "Oil":
-            H_ex = Point_on_cycle()
-            
-            H_ex.set_fluid(H_su.fluid)
-            H_ex.set_T(HX.Tvec_h[-1])
-            H_ex.set_p(HX.pvec_h[-1]) 
-            H_ex.set_m_dot(HX.H_su.m_dot) 
-            
-            HX.H_ex = H_ex
-        else: 
-            H_ex = Oil_Point_on_cycle(oil_name)
-            
-            H_ex.set_T(HX.Tvec_h[-1]) # Example temperature [K]
-            H_ex.set_p(HX.pvec_h[-1]) # Example Pressure [Pa]
-            H_ex.set_m_dot(HX.H_su.m_dot) 
-
-            HX.H_ex = H_ex
+        # Hot side
+        H_ex = Mass_connector()
         
-        if C_su.fluid != "Oil":
-            C_ex = Point_on_cycle()
-            
-            C_ex.set_fluid(C_su.fluid)
-            C_ex.set_T(HX.Tvec_c[-1]) # Example temperature [K]
-            C_ex.set_p(HX.pvec_c[-1]) # Example Pressure [Pa]
-            C_ex.set_m_dot(HX.C_su.m_dot) 
-
-            HX.C_ex = C_ex
-        else:
-            C_ex = Oil_Point_on_cycle(oil_name)
+        H_ex.set_fluid(H_su.fluid)
+        H_ex.set_T(HX.Tvec_h[-1])
+        H_ex.set_p(HX.pvec_h[-1]) 
+        H_ex.set_m_dot(HX.H_su.m_dot) 
         
-            C_ex.set_fluid(C_su.fluid)
-            C_ex.set_T(HX.Tvec_c[-1]) # Example temperature [K]
-            C_ex.set_p(HX.pvec_c[-1]) # Example Pressure [Pa]
-            C_ex.set_m_dot(HX.C_su.m_dot) 
-
-            HX.C_ex = C_ex
+        HX.H_ex = H_ex
+        
+        if wf_T == "C": # The working fluid is the cold fluid    
+            HX.point_ex[1] = H_ex
             
+        elif wf_T == "H": # The working fluid is the hot fluid    
+            HX.point_ex[0] = H_ex
+            
+        # Cold side
+        C_ex = Mass_connector()
+        
+        C_ex.set_fluid(C_su.fluid)
+        C_ex.set_T(HX.Tvec_c[-1]) # Example temperature [K]
+        C_ex.set_p(HX.pvec_c[-1]) # Example Pressure [Pa]
+        C_ex.set_m_dot(HX.C_su.m_dot) 
+
+        HX.C_ex = C_ex
+        
+        if wf_T == "C": # The working fluid is the cold fluid    
+            HX.point_ex[0] = C_ex
+            
+        elif wf_T == "H": # The working fluid is the hot fluid    
+            HX.point_ex[1] = C_ex
+                    
         print("\n")
-        return HX  #, H_ex, C_ex
+        
+        HX.defined = True
+
+        return HX, H_ex, C_ex
     
     print("\n")
     return HX, 0, 0

@@ -5,14 +5,11 @@ Created on Wed Jan 10 15:23:02 2024
 @author: Elise
 """
 import sys
-sys.path.append('C:/Users/Elise/OneDrive - Universite de Liege/Documenten/Thesis/Python_Library')
+sys.path.append('C:/Users/Elise/OneDrive - Universite de Liege/Documenten/Thesis/LaboThapLibrary')
 
 # Modèle des composants principaux, sans perte de charge et perte à l'ambiance dans les tuyères et composants auxilliaires
 
 from CoolProp.CoolProp import PropsSI
-
-# import sys
-# sys.path.append('C:/Users/Elise/OneDrive - Universite de Liege/Documenten/Thesis/Python_Library/Component/Heat_Exchanger/Plate_Heat_Exchanger/Moving_Boundary_Model/Modules')
 
 from Port.Mass_connector import Mass_connector
 from Port.Heat_connector import Heat_connector

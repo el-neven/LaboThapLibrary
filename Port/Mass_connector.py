@@ -63,7 +63,15 @@ class Mass_connector:
                 self.x = PropsSI('Q', self.variables_input[0][0], self.variables_input[0][1], self.variables_input[1][0], self.variables_input[1][1], self.fluid)
                 self.state_known = True
             except:
-                print("Error: This pair of inputs is not yet supported")
+                try:
+                    self.T = PropsSI('T', self.variables_input[0][0], self.variables_input[0][1], self.variables_input[1][0], self.variables_input[1][1], self.fluid)
+                    self.p = PropsSI('P', self.variables_input[0][0], self.variables_input[0][1], self.variables_input[1][0], self.variables_input[1][1], self.fluid)
+                    self.h = PropsSI('H', self.variables_input[0][0], self.variables_input[0][1], self.variables_input[1][0], self.variables_input[1][1], self.fluid)
+                    self.s = PropsSI('S', self.variables_input[0][0], self.variables_input[0][1], self.variables_input[1][0], self.variables_input[1][1], self.fluid)
+                    self.D = PropsSI('D', self.variables_input[0][0], self.variables_input[0][1], self.variables_input[1][0], self.variables_input[1][1], self.fluid)
+                    self.state_known = True
+                except:
+                    print("Error: This pair of inputs is not yet supported")
 
 
     def set_fluid(self, value):
@@ -77,7 +85,12 @@ class Mass_connector:
                 self.fluid = value
                 self.check_completely_known()
             except:
-                print("Error: Incorect fluid name")
+                try: # Incompressible fluids such as thermal oils
+                    PropsSI('D','T',300.0,'P',101325,value)
+                    self.fluid = value
+                    self.check_completely_known()
+                except:
+                    print("Error: Incorect fluid name :", self.fluid)
         
     def set_m_dot(self, value):
         self.m_dot = value

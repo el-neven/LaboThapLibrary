@@ -13,28 +13,31 @@ Modification w/r to previous version:
 
 # from __future__ import division, print_function
 
-from Modules.point import Point_on_cycle
-from Modules.oil_point import Oil_Point_on_cycle
-from HX_GeneralizedMovingBoundaries_Plate import Plate_HX_Geom_SWEP, Plate_HX
-    
+import sys
+sys.path.append('C:/Users/Elise/OneDrive - Universite de Liege/Documenten/Thesis/LaboThapLibrary')
+
+from Port.Mass_connector import Mass_connector
+from HX_GeneralizedMovingBoundaries_Plate import Plate_HX_Geom_SWEP, Plate_HeatExchanger
+from CoolProp.CoolProp import PropsSI    
+
 "--------- 1) Desuperheater ------------------------------------------------------------------------------------------"
 
 "Cyclopentane Su"
-DSH_C5_su = Point_on_cycle()
+DSH_C5_su = Mass_connector()
 
 # Set the fluid
 DSH_C5_su.set_fluid("Cyclopentane")
 
 # Set other properties
 DSH_C5_su.set_m_dot(0.014)  # Example mass flow rate [kg/s]
-# DSH_C5_su.set_T(205 + 273.15) # Example temperature [K]
+DSH_C5_su.set_T(205 + 273.15) # Example temperature [K]
 DSH_C5_su.set_p(1*1e5)  # Example Pressure [Pa]
 
 "Water Su"
-DSH_water_su = Point_on_cycle()
+DSH_water_su = Mass_connector()
 
 # Set the fluid
-DSH_water_su.set_fluid("water")
+DSH_water_su.set_fluid("Water")
 
 # Set other properties
 DSH_water_su.set_m_dot(0.08)  # Example mass flow rate [kg/s]
@@ -52,7 +55,7 @@ n_disc = 30 # number of discretization
 
 calc = 1 # flag to compute the HX
 plot = 0 # flag to plot the HX fluids temperature profiles
-print_flag = 0 # flag to print the HX results
+print_flag = 1 # flag to print the HX results
 
 "Geometry"
 
@@ -67,26 +70,29 @@ flow_type = "Counter_flow"
 "Heat Exchanger initiation and computation"
 
 print("\n")
-HX_DSH, DSH_C5_ex, DSH_water_ex = Plate_HX(DSH_C5_su, DSH_water_su, HX_DSH_geom, htc_type, flow_type, n_disc, DP_H_ON, DP_C_ON, calc, plot, print_flag)
 
-M_HX_DSH = sum(HX_DSH.Mvec_h)
+HX_DSH = Plate_HeatExchanger()
+
+# HX_DSH, DSH_C5_ex, DSH_water_ex = Plate_HX("H",DSH_C5_su, DSH_water_su, HX_DSH_geom, htc_type, flow_type, n_disc, DP_H_ON, DP_C_ON, calc, plot, print_flag)
+
+# M_HX_DSH = sum(HX_DSH.Mvec_h)
 
 # "--------- 2) Evaporator ------------------------------------------------------------------------------------------"
 
 # "Cyclopentane Su"
-# Evap_C5_su = Point_on_cycle()
+# Evap_C5_su = Mass_connector()
 
 # # Set the fluid
 # Evap_C5_su.set_fluid("Cyclopentane")
 
 # # Set other properties
 # Evap_C5_su.set_m_dot(0.014)  # Example mass flow rate [kg/s]
-# # Evap_C5_su.set_T(41 + 273.15) # Example temperature [K]
+# Evap_C5_su.set_T(41 + 273.15) # Example temperature [K]
 # Evap_C5_su.set_p(36*1e5)  # Example Pressure [Pa]
 
 # "Oil Su"
-# oil_name = "Pirobloc"
-# Evap_oil_su = Oil_Point_on_cycle(oil_name)
+# Evap_oil_su = Mass_connector()
+# Evap_oil_su.set_fluid("INCOMP::T66")
 
 # # Set other properties
 # Evap_oil_su.set_m_dot(0.4)  # Example mass flow rate [kg/s]
@@ -119,14 +125,14 @@ M_HX_DSH = sum(HX_DSH.Mvec_h)
 # "Heat Exchanger initiation and computation"
 
 # print("\n")
-# HX_Evap, Evap_C5_ex, Evap_water_ex = Plate_HX(Evap_C5_su, Evap_oil_su, HX_Evap_geom, htc_type, flow_type, n_disc, DP_H_ON, DP_C_ON, calc, plot, print_flag, oil_name = oil_name)
+# HX_Evap, Evap_C5_ex, Evap_water_ex = Plate_HX("C",Evap_C5_su, Evap_oil_su, HX_Evap_geom, htc_type, flow_type, n_disc, DP_H_ON, DP_C_ON, calc, plot, print_flag)
 
 # M_HX_Evap = sum(HX_Evap.Mvec_c)
 
 # "--------- 3) Condenser ------------------------------------------------------------------------------------------"
 
 # "Cyclopentane Su"
-# Cond_C5_su = Point_on_cycle()
+# Cond_C5_su = Mass_connector()
 
 # # Set the fluid
 # Cond_C5_su.set_fluid("Cyclopentane")
@@ -137,7 +143,7 @@ M_HX_DSH = sum(HX_DSH.Mvec_h)
 # Cond_C5_su.set_p(0.9*1e5)  # Example Pressure [Pa]
 
 # "Water Su"
-# Cond_water_su = Point_on_cycle()
+# Cond_water_su = Mass_connector()
 
 # # Set the fluid
 # Cond_water_su.set_fluid("Water")
@@ -173,7 +179,7 @@ M_HX_DSH = sum(HX_DSH.Mvec_h)
 # "Heat Exchanger"
 
 # print("\n")
-# HX_Cond, Cond_C5_ex, Cond_water_ex = Plate_HX(Cond_C5_su, Cond_water_su, HX_Cond_geom, htc_type, flow_type, n_disc, DP_H_ON, DP_C_ON, calc, plot, print_flag)
+# HX_Cond, Cond_C5_ex, Cond_water_ex = Plate_HX("H",Cond_C5_su, Cond_water_su, HX_Cond_geom, htc_type, flow_type, n_disc, DP_H_ON, DP_C_ON, calc, plot, print_flag)
 
 # M_HX_Cond = sum(HX_Cond.Mvec_h)
 

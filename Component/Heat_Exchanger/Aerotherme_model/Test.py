@@ -6,7 +6,7 @@ Created on Thu Oct 19 14:10:07 2023
 """
 
 import sys
-sys.path.append('C:/Users/Elise/OneDrive - Universite de Liege/Documenten/Thesis/Python_Library')
+sys.path.append('C:/Users/Elise/OneDrive - Universite de Liege/Documenten/Thesis/LaboThapLibrary')
 
 import math
 import numpy as np
