@@ -24,7 +24,7 @@ class Mass_connector:
         
         self.fluid = None
         self.m_dot = None           # Mass flow rate [kg/s]
-        self.Q_dot = None           # Volume flow rate [m^3/s]
+        self.V_dot = None           # Volume flow rate [m^3/s]
         self.T = None               # Temperature [K]
         self.p = None               # Pressure [Pa]
         self.h = None               # Spec. enthalpy [J/kg]
@@ -46,7 +46,7 @@ class Mass_connector:
         else:
             pass
         
-        if self.m_dot != None or self.Q_dot != None and self.state_known and not self.completely_known:
+        if (self.m_dot != None or self.V_dot != None) and self.state_known and not self.completely_known:
             self.completely_known = True
             print("Point completely known")
         else:
@@ -96,8 +96,8 @@ class Mass_connector:
         self.m_dot = value
         self.check_completely_known()
 
-    def set_Q_dot(self, value):
-        self.Q_dot = value
+    def set_V_dot(self, value):
+        self.V_dot = value
         self.check_completely_known()
         
     def set_T(self, value):

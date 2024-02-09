@@ -11,10 +11,12 @@ from math import log10, sqrt, inf
 import warnings
 #%%
 def Gnielinski_Pipe_HTC(mu, Pr, k, G, Dh, L):
+    # print(mu, Pr, k, G, Dh, L)
     #-------------------------------------------------------------------------
     def Gnielinski_Laminar(Re, Pr, Dh, L):
         Nu_1 = 4.364
         Nu_2 = 1.953*(Re*Pr*Dh/L)**(1/3)
+        #print(Nu_2)
         Nu = (Nu_1**3 + 0.6**3 + (Nu_2 - 0.6)**3)**(1/3)
         return Nu
     def Gnielinski_Turbulent(Re, Pr):

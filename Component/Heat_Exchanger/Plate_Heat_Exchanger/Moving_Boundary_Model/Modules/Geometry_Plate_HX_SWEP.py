@@ -127,7 +127,52 @@ class Plate_HX_Geom_SWEP(object):
     
             # Dh : hydraulic diameter
             self.C_Dh = (4*self.C_canal_t*self.w)/(2*self.C_canal_t+2*self.w)
-            self.H_Dh = (4*self.H_canal_t*self.w)/(2*self.H_canal_t+2*self.w)      
+            self.H_Dh = (4*self.H_canal_t*self.w)/(2*self.H_canal_t+2*self.w)  
+
+        if name == "P200THx140/1P":
+            
+            # Heat transfer area  
+            self.A_h = 17.8 # m^2 hot side OK
+            self.A_c = 17.8 # m^2 cold side OK
+            
+            # HTX dimensions
+            self.l = 0.525 # [m] : length A?? peut être OK
+            self.w = 0.243 # [m] : width B?? peut être OK
+            self.h = 0.3426 # [m] : height F??
+            self.l_v = 0.450 # [m] : length between ports H??
+            self.casing_t = 0.005 # [m] : casing thickness # !!! arbitrary
+            
+            # Number and thickness of plates
+            self.n_plates = 140 # OK
+            self.t_plates = 0.0008 # [m] # !!! arbitrary
+            
+            # Fooling factor
+            self.fooling = 0.111 # [m^2, °C/kW] OK
+        
+            # Number of canals per pass
+            self.C_n_canals = 69 # Cold side OK
+            self.H_n_canals = 70 # Hot side OK
+            
+            # Plate values 
+            self.plate_cond = 14 # [W/(m*K)] : plate conduction acier inoxidable OK
+            self.plate_pitch_co = 0.005 # 0.00745870973 # corrugated pitch # !!! arbitrary
+            self.chevron_angle = 20*np.pi/180 # !!! arbitrary
+        
+            # Total volume of each part
+            self.H_V_tot = 16.63*1e-3 # [m^3] OK hot volume
+            self.C_V_tot = 16.87*1e-3 # [m^3] OK cold volume
+            
+            # Canal thickness
+            self.C_canal_t = ((self.h-2*self.casing_t) - self.n_plates*self.t_plates)/(2*self.C_n_canals)
+            self.H_canal_t = ((self.h-2*self.casing_t) - self.n_plates*self.t_plates)/(2*self.H_n_canals)
+        
+            # Canal Surface
+            self.C_CS = self.C_canal_t*(self.w-2*self.casing_t)
+            self.H_CS = self.H_canal_t*(self.w-2*self.casing_t)
+    
+            # Dh : hydraulic diameter
+            self.C_Dh = (4*self.C_canal_t*self.w)/(2*self.C_canal_t+2*self.w)
+            self.H_Dh = (4*self.H_canal_t*self.w)/(2*self.H_canal_t+2*self.w)    
             
         else: # manual setting
         

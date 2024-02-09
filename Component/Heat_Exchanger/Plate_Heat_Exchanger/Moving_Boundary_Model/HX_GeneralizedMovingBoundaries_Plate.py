@@ -25,7 +25,7 @@ from math import log, pi
 import scipy.optimize
 
 from Component.Heat_Exchanger.Plate_Heat_Exchanger.Moving_Boundary_Model.Modules.F_lmtd2 import F_lmtd2
-from Component.Heat_Exchanger.Plate_Heat_Exchanger.Moving_Boundary_Model.Modules.PropsFluid_210907 import PropsFluid
+from Component.Heat_Exchanger.Plate_Heat_Exchanger.Moving_Boundary_Model.Modules.PropsFluid_210907 import PropsFluid, conducticity_R1233zd
 from Component.Heat_Exchanger.Plate_Heat_Exchanger.Moving_Boundary_Model.Modules.Gnielinski_Pipe_HTC_210908 import Gnielinski_Pipe_HTC
 from Component.Heat_Exchanger.Plate_Heat_Exchanger.Moving_Boundary_Model.Modules.Han_Cond_BPHEX_HTC_210909 import Han_Cond_BPHEX_HTC
 from Component.Heat_Exchanger.Plate_Heat_Exchanger.Moving_Boundary_Model.Modules.Han_Boiling_BPHEX_HTC_210910 import Han_Boiling_BPHEX_HTC
@@ -42,7 +42,7 @@ debug = False
 
 #%%
 
-class Plate_HeatExchanger(object):
+class Plate_HeatExchanger(): #useless to put (object) in the brackets
     
     class geom():
             pass      
@@ -97,7 +97,15 @@ class Plate_HeatExchanger(object):
         if self.point_su[0] != None and self.point_su[1] != None:
             if (self.point_su[0].completely_known) and (self.point_su[1].completely_known):
                 self.calculable = True
-        
+
+    def inputs(self, H_su, C_su, wf_T):
+        self.point_su = [H_su, C_su]
+        self.H_su = H_su
+        self.C_su = C_su
+        self.wf_T = wf_T
+        #self.point_ex = [H_ex, C_ex]
+        self.check_calculable()
+
     def check_parametrized(self):
         if self.n_disc != None and self.geom != None:
             self.parametrized = True
@@ -164,7 +172,7 @@ class Plate_HeatExchanger(object):
 
 
 #%%
-    def external_pinching(self):
+    def external_pinching(self): # To find boundaries for the iteration on Q_dot
         "Determine the maximum heat transfer rate based on the external pinching analysis"
         
         "1) Set of arbitrary bound values" # !!! Find out why      
@@ -268,7 +276,7 @@ class Plate_HeatExchanger(object):
         n_disc = self.n_disc + 1
         
         # Force the minimum number of discretizations needed
-        n_disc = max(n_disc, 2)
+        n_disc = max(n_disc, 2) #Three zone boundary model
         
         # The original Bell2015 code uses: "if h_cdew is not None". I don't see when that could happen without an error before.
         "3.1) Create a vector of enthalpies : initiates the cell boundaries. If phase change, dew and bubble point are added"
@@ -526,6 +534,7 @@ class Plate_HeatExchanger(object):
         self.p_ci = self.C_su.p
                 
         # Determine the inlet temperatures from the pressure/enthalpy pairs
+        #Useless I think
         self.T_ci = CP.PropsSI('T', 'P', self.C_su.p, 'H', self.C_su.h, self.C_su.fluid)
         self.T_hi = CP.PropsSI('T', 'P', self.p_hi, 'H', self.h_hi, self.H_su.fluid)
 
@@ -619,12 +628,11 @@ class Plate_HeatExchanger(object):
             if and_solve:
                 # Hot side
                 H_ex = Mass_connector()
-                
+
                 H_ex.set_fluid(self.H_su.fluid)
-                H_ex.set_T(self.Tvec_h[-1])
+                H_ex.set_T(self.Tvec_h[-1]) #Vrai température déterminé sur base de Q
                 H_ex.set_p(self.pvec_h[-1]) 
                 H_ex.set_m_dot(self.H_su.m_dot) 
-                
                 self.H_ex = H_ex
                 
                 if self.wf_T == "C": # The working fluid is the cold fluid    
@@ -637,8 +645,9 @@ class Plate_HeatExchanger(object):
                 C_ex = Mass_connector()
                 
                 C_ex.set_fluid(self.C_su.fluid)
-                C_ex.set_T(self.Tvec_c[-1]) # Example temperature [K]
-                C_ex.set_p(self.pvec_c[-1]) # Example Pressure [Pa]
+
+                C_ex.set_T(self.Tvec_c[-1]) # Example temperature [K] (last one in the vector Tvec_c)
+                C_ex.set_h(self.hvec_c[-1]) # Example Pressure [Pa]
                 C_ex.set_m_dot(self.C_su.m_dot) 
         
                 self.C_ex = C_ex
@@ -821,6 +830,7 @@ class Plate_HeatExchanger(object):
                     mu_h, Pr_h, k_h, mu_wall, mu_rat, _, _ = PropsFluid(Th_mean, p_h_mean, T_wall_h, self.H_su.fluid, self.h_incomp_flag)
                     if self.H.Correlation_1phase  == "Gnielinski":
                         alpha_h, _ = Gnielinski_Pipe_HTC(mu_h, Pr_h, k_h, G_h, self.geom.H_Dh, self.geom.l)
+                        #print(alpha_h) #Whaaaaat c'est des nombres complexes!
                 
                 # 2 phases case
                 elif self.phases_h[k] == "two-phase" or self.phases_h[k] == "vapor-wet":
@@ -889,13 +899,26 @@ class Plate_HeatExchanger(object):
                         x_c = 1
                         
                     # Thermodynamical variables
-                    mu_c_l = CP.PropsSI("V", "Q", 0, "P", p_c_mean, self.C_su.fluid)
-                    k_c_l = CP.PropsSI("L", "Q", 0, "P", p_c_mean, self.C_su.fluid)
-                    Pr_c_l = CP.PropsSI("Prandtl", "Q", 0, "P", p_c_mean, self.C_su.fluid)
-                    rho_c_l = CP.PropsSI("D", "Q", 0, "P", p_c_mean, self.C_su.fluid)
-                    rho_c_v = CP.PropsSI("D", "Q", 1, "P", p_c_mean, self.C_su.fluid)
-                    i_fg_c = CP.PropsSI('H', 'Q', 1, 'P', p_c_mean, self.C_su.fluid) - CP.PropsSI('H', 'Q', 0, 'P', p_c_mean, self.C_su.fluid)
-                    
+                        # Thermodynamical variables
+                    if self.C_su.fluid == 'R1233zd(E)':
+                        T_c_l = CP.PropsSI("T", "Q", 0, "P", p_c_mean, self.C_su.fluid)
+                        k_c_l = conducticity_R1233zd(T_c_l, p_c_mean)
+
+                        mu_c_l = CP.PropsSI("V", "Q", 0, "P", p_c_mean, self.C_su.fluid)
+                        cp_c_l = CP.PropsSI("C", "Q", 0, "P", p_c_mean, self.C_su.fluid)
+                        Pr_c_l = (mu_c_l*cp_c_l)/k_c_l
+                        rho_c_l = CP.PropsSI("D", "Q", 0, "P", p_c_mean, self.C_su.fluid)
+                        rho_c_v = CP.PropsSI("D", "Q", 1, "P", p_c_mean, self.C_su.fluid)
+                        i_fg_c = CP.PropsSI('H', 'Q', 1, 'P', p_c_mean, self.C_su.fluid) - CP.PropsSI('H', 'Q', 0, 'P', p_c_mean, self.C_su.fluid)
+
+                    else:    
+                        mu_c_l = CP.PropsSI("V", "Q", 0, "P", p_c_mean, self.C_su.fluid)
+                        k_c_l = CP.PropsSI("L", "Q", 0, "P", p_c_mean, self.C_su.fluid)
+                        Pr_c_l = CP.PropsSI("Prandtl", "Q", 0, "P", p_c_mean, self.C_su.fluid)
+                        rho_c_l = CP.PropsSI("D", "Q", 0, "P", p_c_mean, self.C_su.fluid)
+                        rho_c_v = CP.PropsSI("D", "Q", 1, "P", p_c_mean, self.C_su.fluid)
+                        i_fg_c = CP.PropsSI('H', 'Q', 1, 'P', p_c_mean, self.C_su.fluid) - CP.PropsSI('H', 'Q', 0, 'P', p_c_mean, self.C_su.fluid)
+                        
                     # This boolean serves to spare to recalculate this properties in the dry-out analysis further ahead.
                     self.ColdSide_Props_Calculated = True
                     

@@ -54,7 +54,7 @@ DP_C_ON = True
 n_disc = 30 # number of discretization
 
 calc = 1 # flag to compute the HX
-plot = 0 # flag to plot the HX fluids temperature profiles
+plot = 1 # flag to plot the HX fluids temperature profiles
 print_flag = 1 # flag to print the HX results
 
 "Geometry"
