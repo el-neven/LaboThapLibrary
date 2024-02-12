@@ -66,6 +66,8 @@ HX_Evap.set_parameters(**{
 })
 HX_Evap.solve()
 print(HX_Evap.C_ex.h)
+#HX_Evap.plot_objective_function()
+HX_Evap.plot_cells()
 # print(HX_Evap.Qmax)
 # HX_Evap.plot_objective_function()
 

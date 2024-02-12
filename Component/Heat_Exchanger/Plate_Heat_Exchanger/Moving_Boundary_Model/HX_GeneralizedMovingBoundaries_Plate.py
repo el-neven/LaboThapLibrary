@@ -990,8 +990,9 @@ class Plate_HeatExchanger(): #useless to put (object) in the brackets
 #%%
     def plot_objective_function(self, N = 100):
         """ Plot the objective function """
+        print(self.Qmax)
         Q = np.linspace(1e-5,self.Qmax,N)
-        r = np.array([self.objective_function(_Q) for _Q in Q])
+        r = np.array([self.objective_function(_Q) for _Q in Q]) #Residuals!
         fig, ax = plt.subplots()
         ax.plot(Q, r)
         ax.grid(True)
