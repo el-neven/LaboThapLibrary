@@ -16,7 +16,7 @@ import random
 import csv
 import matplotlib.pyplot as plt
 from Port.Mass_connector import Mass_connector
-from Aerotherme_model import Dry_cooler
+from Heat_Exchanger.Aerotherme_model.Simulation_model import Dry_cooler
 
 
 "Connectors"
@@ -27,11 +27,11 @@ Air_in = Mass_connector()
 Air_out = Mass_connector()
 
 Water_in.set_fluid('water')
-Water_in.set_Q_dot(0.003) # Volume flow rate [m^3/s]
+Water_in.set_V_dot(0.003) # Volume flow rate [m^3/s]
 Water_in.set_T(65+273.15) # Water entry temperature
 
 Air_in.set_fluid('air')
-Air_in.set_Q_dot(106500/3600/4) # Volume flow rate [m^3/s]
+Air_in.set_V_dot(106500/3600/4) # Volume flow rate [m^3/s]
 Air_in.set_T(20+273.15) # Air entry temperature
     
 "Intput variables"
@@ -63,15 +63,15 @@ HX.set_geometrical_parameters(**{
     'k_alu': 237, # Conductivity of aluminium [W/mK] (hypothesis on the material of the fins)
 })
 
-HX.set_calibrated_parameters(**{
-    # 'C1' : 1, # Coefficient of the heat transfer between the water and the tube
-    # 'C2' : 0, # Coefficient of the heat transfer between the air and the fin
-    # 'C3' : 1, # Coefficient of the heat transfer between the fin and the tube
-    # 'C4' : 0, # Coefficient of the heat transfer between the air and the tube
+HX.set_calibration_parameters(**{
+    'C1' : 1,
+    'C2' : 0,
+    'C3' : 1,
+    'C4' : 0,
 })
 
-HX.update_inputs(Water_in, Air_in, Water_out, Air_out, fan)
+HX.set_inputs(Water_in, Air_in, Water_out, Air_out, fan)
 
 HX.solve()
 
-print(HX.Hxs[1].Tw_out)
+print(HX.Hxs[7].Tw_out)

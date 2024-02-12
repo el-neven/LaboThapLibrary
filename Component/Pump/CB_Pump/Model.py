@@ -102,8 +102,6 @@ class PumpModel:
         w_interpolation = RegularGridInterpolator((V_dot_arrays, Head_arrays), w_grid,
                                                  bounds_error=False, fill_value=None)
         
-        
-
 
     
     def W_dot_pp_mapping(self, w_value, V_dot_value):

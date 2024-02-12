@@ -8,7 +8,7 @@ Created on Thu Nov  2 10:38:56 2023
 import sys
 sys.path.append('C:/Users/Elise/OneDrive - Universite de Liege/Documenten/Thesis/Python_Library')
 
-from Aerotherme_model import Dry_cooler
+from Heat_Exchanger.Aerotherme_model.Simulation_model import Dry_cooler
 import csv
 import numpy as np
 import random

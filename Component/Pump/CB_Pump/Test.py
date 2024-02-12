@@ -21,6 +21,4 @@ m_dot = 1.2
 Head = 50
 Pump = PumpModel()
 Pump.set_inputs(point_su, point_ex)
-#Pump.frequency_mapping(m_dot, Head)
-#Pump.W_dot_pp_mapping(m_dot, 60)
 Pump.solve()

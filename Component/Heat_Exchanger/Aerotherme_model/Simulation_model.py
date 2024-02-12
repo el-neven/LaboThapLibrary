@@ -29,40 +29,31 @@ class Dry_cooler:
         self.point_ex2 = None
 
         "Initialize calibration parameters"
-        self.C1 = None
-        self.C2 = None
-        self.C3 = None
-        self.C4 = None
+        # The thermal resistances are based on theoretical models and need to be calibrated with experimental values
+        self.C1 = None # Correction term for the resitance made by the convection in the tubes for the forced convection case (depends on the flow rate)
+        self.C2 = None # Correction term for the resitance made by the conduction through the tube walls and the thermal resistance for the forced convection case
+        self.C3 = None # Correction term for the resitance made by the convection in the tubes for the natural convection case (depends on the flow rate)
+        self.C4 = None # Correction term for the resitance made by the conduction through the tube walls and the thermal resistance for the natural convection case
 
         "Initialize geometrical parameters"
         # Tubes data for one fictional exchanger
-        self.nb_row = None
-        self.nb_column = None
-        self.D_ext = None
-        self.th_wall = None 
-        self.e_wall = None
-        self.L_tube = None
-        self.k_tube = None
+        self.nb_row = None # Number of row of tubes
+        self.nb_column = None # Number of column of tubes
+        self.D_ext = None # External diameter [m]
+        self.th_wall = None # Wall thikness of the tubes [m]
+        self.e_wall = None # Wall roughness [m] (hypothesis) 
+        self.L_tube = None # Length of one tube [m]
+        self.k_tube = None # Conductivity of steel [W/mK] (hypothesis on the material of the fins) 
 
         # Fins data for one fictional exchanger
-        self.th_fin = None
-        self.p_fin = None
-        self.h_fin = None
-        self.l_fin = None
-        self.k_alu = None
+        self.th_fin = None # Thickness of the fins [m] 
+        self.p_fin = None # space between fins [m] (evaluated by counting the number of fins on 4cm and applying p_fin = (4-19*th_fin)/(nb_fins_4-1))
+        self.h_fin = None # Height of the fins [m] (hypothesis, because two tubes of different temperature use the same fin, we divided the fin hight by two. 
+        # It derives from the hypothesis that the fin is high enough so that the two heat transfers are decoupled)
+        self.l_fin = None # Length of the fins [m]
+        self.k_alu = None # Conductivity of aluminium [W/mK] (hypothesis on the material of the fins)
 
-    def update_inputs(self, point_su1, point_su2, point_ex1, point_ex2, fan):
-        """
-        Update the inputs of the Aerotherme model.
-
-        Args:
-            point_su1 (Point): The supply point of the water.
-            point_su2 (Point): The supply point of the air.
-            point_ex1 (Point): The exhaust point of the water.
-            point_ex2 (Point): The exhaust point of the air.
-            fan (Fan): The fan used in the Aerotherme model.
-
-        """
+    def set_inputs(self, point_su1, point_su2, point_ex1, point_ex2, fan):
         self.point_su1 = point_su1
         self.point_su2 = point_su2
         self.point_ex1 = point_ex1
@@ -70,34 +61,22 @@ class Dry_cooler:
 
         self.water = point_su1.fluid
         self.Tw = point_su1.T # Water temperature [K]
-        self.Qw = point_su1.Q_dot # Water flow rate [m^3/s]
+        self.Qw = point_su1.V_dot # Water flow rate [m^3/s]
 
         self.air = point_su2.fluid
         self.Ta = point_su2.T # External air temperature [K]
-        self.Qa = point_su2.Q_dot # Air flow rate [m^3/s]
+        self.Qa = point_su2.V_dot # Air flow rate [m^3/s]
 
         self.fan = fan # List of boolean indicating if the fan is working or not
 
         self.check_calculable()
 
     def check_calculable(self):
-        """
-        Checks if all the required inputs for calculation are provided.
-        
-        Returns:
-            bool: True if all required inputs are provided, False otherwise.
-        """
-        self.Required_inputs = [self.point_su1.T, self.point_su1.Q_dot, self.point_su2.T, self.point_su2.Q_dot]
+        self.Required_inputs = [self.point_su1.T, self.point_su1.V_dot, self.point_su2.T, self.point_su2.V_dot]
         if all(Input is not None for Input in self.Required_inputs):
             self.calculable = True
 
     def check_parametrized(self):
-        """
-        Checks if all the required parameters for calculation are provided.
-
-        Returns:
-            bool: True if all required parameters are provided, False otherwise.
-        """
         if self.nb_row is None and self.nb_column is None and self.D_ext is None and self.th_wall is None and self.e_wall is None and self.L_tube is None and self.k_tube is None and self.th_fin is None and self.p_fin is None and self.h_fin is None and self.l_fin is None and self.k_alu is None:
             self.parametrized = False
         else:
@@ -107,11 +86,6 @@ class Dry_cooler:
         """
         Set the geometrical parameters of the Dry cooler model.
 
-        Args:
-            **kwargs: Arbitrary keyword arguments.
-
-        Returns:
-            list: The list of parameter values.
         """
         for key, value in kwargs.items():
             if hasattr(self, key):
@@ -129,6 +103,7 @@ class Dry_cooler:
     def calculate_geometrical_parameters(self):
         """
         Calculate the geometrical parameters of the Dry cooler model.
+
         """
         self.D_int = self.D_ext - 2*self.th_wall # Internal diameter [m]
         self.parameters.append(('D_int', self.D_int))
@@ -151,15 +126,10 @@ class Dry_cooler:
         self.r_fin_eff = math.sqrt(self.A_fins_tot/(2*self.nb_fins*math.pi+(self.D_ext/2)**2))
         self.parameters.append(('r_fin_eff', self.r_fin_eff ))
 
-    def set_calibrated_parameters(self, **kwargs):
+    def set_calibration_parameters(self, **kwargs):
         """
-        Set the calibrated parameters of the Dry cooler model.
+        Set the calibration parameters of the Dry cooler model.
 
-        Args:
-            **kwargs: Arbitrary keyword arguments.
-
-        Returns:
-            list: The list of parameter values.
         """
         for key, value in kwargs.items():
             if hasattr(self, key):
@@ -171,7 +141,7 @@ class Dry_cooler:
             self.parameters.append(('C1', self.C1))
 
         if self.C2 is None:
-            self.C2 = 0
+            self.C2 = 0 
             self.parameters.append(('C2', self.C2))
         
         if self.C3 is None:
@@ -182,48 +152,53 @@ class Dry_cooler:
             self.C4 = 0
             self.parameters.append(('C4', self.C4))
 
-        
     def solve(self):
         """
         Solve the Dry cooler model.
+        
         """
-        "Creation of the exchangers"
-        Hx1 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
-        Hx2 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
-        Hx3 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
-        Hx4 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
-        Hx5 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
-        Hx6 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
-        Hx7 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
-        Hx8 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
 
-        "Link between the exchangers (Water side)" # One water flow
-        Hx1.set_next_exch_water(Hx2)
-        Hx2.set_next_exch_water(Hx3)
-        Hx3.set_next_exch_water(Hx4)
-        Hx4.set_next_exch_water(Hx5)
-        Hx5.set_next_exch_water(Hx6)
-        Hx6.set_next_exch_water(Hx7)
-        Hx7.set_next_exch_water(Hx8)
+        if self.calculable and self.parametrized:
 
-        "Link the heat exchangers to the fans (Air side)" # 4 Air flows
-        Hx8.set_next_exch_air(Hx1, fan=self.fan[0]) #Air flow passing throught Hx8 passes through Hx1 and Fan1
-        Hx7.set_next_exch_air(Hx2, fan=self.fan[1])
-        Hx6.set_next_exch_air(Hx3, fan=self.fan[2])
-        Hx5.set_next_exch_air(Hx4, fan=self.fan[3])
+            "Creation of the exchangers"
+            Hx1 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
+            Hx2 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
+            Hx3 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
+            Hx4 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
+            Hx5 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
+            Hx6 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
+            Hx7 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
+            Hx8 = self.Exchanger(self.Tw, self.Ta, self.Qw, self.parameters)
 
-        self.Hxs = [Hx1, Hx2, Hx3, Hx4, Hx5, Hx6, Hx7, Hx8]
+            "Link between the exchangers (Water side)" # One water flow
+            Hx1.set_next_exch_water(Hx2)
+            Hx2.set_next_exch_water(Hx3)
+            Hx3.set_next_exch_water(Hx4)
+            Hx4.set_next_exch_water(Hx5)
+            Hx5.set_next_exch_water(Hx6)
+            Hx6.set_next_exch_water(Hx7)
+            Hx7.set_next_exch_water(Hx8)
 
-        "Evaluate the exchangers operating point"
-        fsolve(self.equations, [self.Tw], args=(Hx1, Hx8))
+            "Link the heat exchangers to the fans (Air side)" # 4 Air flows
+            Hx8.set_next_exch_air(Hx1, fan=self.fan[0]) #Air flow passing throught Hx8 passes through Hx1 and Fan1
+            Hx7.set_next_exch_air(Hx2, fan=self.fan[1])
+            Hx6.set_next_exch_air(Hx3, fan=self.fan[2])
+            Hx5.set_next_exch_air(Hx4, fan=self.fan[3])
+
+            self.Hxs = [Hx1, Hx2, Hx3, Hx4, Hx5, Hx6, Hx7, Hx8]
+
+            "Evaluate the exchangers operating point"
+            fsolve(self.equations, [self.Tw], args=(Hx1, Hx8))
+
+        else:
+            if self.calculable == False:
+                print("Input of the component not completely known")
+                
+            if self.parametrized == False:
+                print("Parameters of the component not completely known")
 
     def equations(self, x, Hx1, Hx8):
-        print('coucou')
         Hx1.compute_T_out() # Compute the temperature of the water at the outlet of the last exchanger
-        return [x[0]-Hx8.Tw_out]
-    
-    def solve_Hx(x, Hx1, Hx8):
-        Hx1.compute_T_out()
         return [x[0]-Hx8.Tw_out]
     
     class Exchanger:
@@ -232,7 +207,6 @@ class Dry_cooler:
             self.fan = None
             parameters = dict(parameters)
             self.parameters = parameters
-            print(parameters['nb_row'])
             
             self.Tw_in = Tw_in
             self.Qw = Qw
@@ -288,25 +262,6 @@ class Dry_cooler:
             self.h_in = self.Nu * self.k_w / parameters['D_int']
             self.C_dot_w = self.cp_w * self.m_dot_w
 
-            "Flow characteristics (air)"
-            self.C_dot_a = self.cp_a * self.m_dot_a
-
-            "Thermal resistance calculation for one fictional exchanger"
-            self.R_in = 1 / (self.h_in * math.pi * parameters['D_int'] * parameters['L_tot'])  # Convection in the tubes
-            self.R_cond = math.log(parameters['D_ext'] / parameters['D_int']) / (2 * parameters['k_tube'] * math.pi * parameters['L_tot'])  # Conduction through the tube walls
-            self.R_out = 0.00166  # Thermal resistance from EES code, in forced condition, with full air draw.
-            
-            "Heat transfer coefficient calculation for forced convection"
-            R_tot = self.parameters['C1'] * self.R_in + self.R_cond + self.R_out + self.parameters['C2']
-            UA = 1 / R_tot
-
-            "Evaluation of exchanger characteristics via the NTU-epsilon method for cross-flow exchanger, both fluid unmixed"
-            self.C_dot_min = min(self.C_dot_w, self.C_dot_a)
-            C_dot_max = max(self.C_dot_w, self.C_dot_a)
-            self.C_R = self.C_dot_min / C_dot_max
-            NTU = UA / self.C_dot_min
-            self.eps = 1 - math.exp((math.exp(-NTU * self.C_R * NTU ** -0.22) - 1) / (self.C_R * NTU ** -0.22))
-
         def set_next_exch_water(self, exch):
             """
             Sets the next heat exchanger for water flow.
@@ -344,6 +299,7 @@ class Dry_cooler:
             if exch.fin_link == None:
                 exch.set_fin_link(self, fan)
             self.fin_link.fan = fan
+
         def set_Tw_in(self, Tw_in):
             self.Tw_in = Tw_in
 
@@ -353,6 +309,8 @@ class Dry_cooler:
         def compute_T_out(self):
             if not self.fan:
                 self.natural_conv()
+            else:
+                self.forced_conv()
             self.q_dot = self.eps*self.C_dot_min*(self.Tw_in - self.Ta_in)
             self.Tw_out = self.Tw_in - self.q_dot/self.C_dot_w
             self.Ta_out = self.Ta_in + self.q_dot/self.C_dot_a
@@ -364,7 +322,27 @@ class Dry_cooler:
                 self.next_exch_water.set_Tw_in(self.Tw_out)
                 self.next_exch_water.compute_T_out()
 
-        def natural_conv(self):
+        def forced_conv(self):
+            "Flow characteristics (air)"
+            self.C_dot_a = self.cp_a * self.m_dot_a
+
+            "Thermal resistance calculation for one fictional exchanger"
+            self.R_in = 1 / (self.h_in * math.pi * self.parameters['D_int'] * self.parameters['L_tot'])  # Convection in the tubes
+            self.R_cond = math.log(self.parameters['D_ext'] / self.parameters['D_int']) / (2 * self.parameters['k_tube'] * math.pi * self.parameters['L_tot'])  # Conduction through the tube walls
+            self.R_out = 0.00166  # Thermal resistance from EES code, in forced condition, with full air draw.
+            
+            "Heat transfer coefficient calculation for forced convection"
+            R_tot = self.parameters['C1'] * self.R_in + self.R_cond + self.R_out + self.parameters['C2']
+            UA = 1 / R_tot
+
+            "Evaluation of exchanger characteristics via the NTU-epsilon method for cross-flow exchanger, both fluid unmixed"
+            self.C_dot_min = min(self.C_dot_w, self.C_dot_a)
+            C_dot_max = max(self.C_dot_w, self.C_dot_a)
+            self.C_R = self.C_dot_min / C_dot_max
+            NTU = UA / self.C_dot_min
+            self.eps = 1 - math.exp((math.exp(-NTU * self.C_R * NTU ** -0.22) - 1) / (self.C_R * NTU ** -0.22))
+
+        def natural_conv(self): # based on the book of Sam
             self.Ts = (self.Tw_in + self.fin_link.Tw_in)/2
             S = self.parameters['p_fin']
             g = 9.81 # Gravitational constant
@@ -386,7 +364,12 @@ class Dry_cooler:
             self.m_dot_estimate = self.q_dot_one_fin_estimate/(self.cp_a*(Ta_out_estimate-self.Ta))*self.parameters['nb_fins']
             self.C_dot_a = self.m_dot_estimate*self.cp_a
             self.C_dot_min = min(self.C_dot_a, self.C_dot_w)
+            C_dot_max = max(self.C_dot_w, self.C_dot_a)
+            self.C_R = self.C_dot_min / C_dot_max
             
+            "Thermal resistance calculation for one fictional exchanger"
+            self.R_in = 1 / (self.h_in * math.pi * self.parameters['D_int'] * self.parameters['L_tot'])  # Convection in the tubes
+            self.R_cond = math.log(self.parameters['D_ext'] / self.parameters['D_int']) / (2 * self.parameters['k_tube'] * math.pi * self.parameters['L_tot'])  # Conduction through the tube walls
             self.R_natural_out = 1/(self.eta_o*self.h_bar_out*self.parameters['A_tot'])
             R_tot = self.parameters['C3']*self.R_in + self.R_cond + self.R_natural_out + self.parameters['C4']
             UA = 1/R_tot
